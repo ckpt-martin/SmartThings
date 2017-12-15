@@ -140,6 +140,7 @@ def parse(String description) {
 	    {
                 map.value = "100"
 	    }
+	}
         else if (descMap.cluster == "0000" && descMap.attrId == "0001")
         {
 			log.debug "APPLICATION VERSION: $descMap.value"
