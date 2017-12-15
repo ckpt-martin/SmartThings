@@ -11,11 +11,12 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  eCozy ZigBee Thermostat
- *  Version: 1.0
+ *
+ *  Version: 1.1
  *
  *  Author: ckpt-martin
  *
- *  Date: 2017-11-30
+ *  Date: 2017-12-15
  */
  
 
@@ -51,28 +52,18 @@ preferences {
 	tiles(scale : 2) {
 		multiAttributeTile(name:"thermostatMulti", type:"thermostat", width:6, height:4, icon:"st.Home.home1", canChangeIcon: true) {
 			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
-				attributeState("default", label:'${currentValue}°',
-                	backgroundColors:[
-						[value: 0, color: "#153591"],
-						[value: 7, color: "#1e9cbb"],
-						[value: 15, color: "#90d2a7"],
-						[value: 23, color: "#44b621"],
-						[value: 29, color: "#f1d801"],
-						[value: 35, color: "#d04e00"],
-						[value: 36, color: "#bc2323"]
-					]
-				)
+				attributeState("temperature", backgroundColor:"#ffa81e", label:'${currentValue}°')
 			}
             tileAttribute("device.heatingSetpoint", key: "VALUE_CONTROL", label:'${currentValue}°') {
 				attributeState("VALUE_UP", action:"increaseHeatSetpoint")
                 attributeState("VALUE_DOWN", action:"decreaseHeatSetpoint")
 			}
 			tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
-                attributeState("battery_ok", label:'Battery OK', icon:"st.arlo.sensor_battery_4")
+                attributeState("default", label:'Battery ${currentValue}%', icon:"st.arlo.sensor_battery_4")
                 attributeState("battery_low", label:'BATTERY LOW!', icon:"st.arlo.sensor_battery_1")
 			}
 			tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
-				attributeState("off", backgroundColor:"#44b621", label:'Off')
+				attributeState("off", backgroundColor:"#1e9cbb", label:'Off')
 				attributeState("idle", backgroundColor:"#44b621", label:'Idle')
 				attributeState("heating", backgroundColor:"#ffa81e", label:'Heating')
 			}
@@ -111,29 +102,14 @@ preferences {
 def parse(String description) {
 	log.debug "Parse description $description"
 	def map = [:]
-    def map2 = [:]
 	if (description?.startsWith("read attr -")) {
 		def descMap = parseDescriptionAsMap(description)
-		float currentSetpoint = device.currentValue("heatingSetpoint")
 		log.debug "Desc Map: $descMap"
 		if (descMap.cluster == "0201" && descMap.attrId == "0000")
         {
 			log.debug "TEMP: $descMap.value"
 			map.name = "temperature"
 			map.value = getTemperature(descMap.value)
-            map2.name = "temp2"
-            if (map.value == currentSetpoint)
-            {
-            	map2.value = "dest_temp"
-            }
-            else if (map.value < currentSetpoint)
-            {
-            	map2.value = "heat"
-            }
-            else
-            {
-            	map2.value = "cool"
-            }
             if (descMap.value == "8000")	// 0x8000 invalid temperature
             {
             	map.value = "--"
@@ -149,9 +125,30 @@ def parse(String description) {
             {
                 map.value = "battery_low"
             }
-            else {
-                map.value = "battery_ok"
-            }
+            else if (batteryVoltage == 25)
+            {
+                map.value = "20"
+			}
+            else if (batteryVoltage == 26)
+            {
+                map.value = "40"
+			}
+            else if (batteryVoltage == 27)
+            {
+                map.value = "60"
+			}
+            else if (batteryVoltage == 28)
+            {
+                map.value = "80"
+			}
+            else if (batteryVoltage == 29)
+            {
+                map.value = "90"
+			}
+            else if (batteryVoltage > 29)
+            {
+                map.value = "100"
+			}
 		}
         else if (descMap.cluster == "0000" && descMap.attrId == "0001")
         {
@@ -367,10 +364,10 @@ def modeAuto() {
 def configure() {
 	def cmds =
         //Cluster ID (0x0201 = Thermostat Cluster), Attribute ID, Data Type, Payload (Min report, Max report, On change trigger)
+        zigbee.configureReporting(0x0201, 0x0008, 0x20, 300, 7200, 0x05) +   //Attribute ID 0x0008 = pi heating demand, Data Type: U8BIT
         zigbee.configureReporting(0x0201, 0x0000, 0x29, 30, 0, 0x0064) + 	//Attribute ID 0x0000 = local temperature, Data Type: S16BIT
     	zigbee.configureReporting(0x0201, 0x0012, 0x29, 30, 0, 0x0064) +  	//Attribute ID 0x0012 = occupied heat setpoint, Data Type: S16BIT
-        zigbee.configureReporting(0x0201, 0x001C, 0x30, 1, 0, 1) +   	//Attribute ID 0x001C = system mode, Data Type: 8 bits enum
-        zigbee.configureReporting(0x0201, 0x0008, 0x20, 300, 7200, 0x05)   //Attribute ID 0x0008 = pi heating demand, Data Type: U8BIT
+        zigbee.configureReporting(0x0201, 0x001C, 0x30, 1, 0, 1)   	//Attribute ID 0x001C = system mode, Data Type: 8 bits enum
         
         //Cluster ID (0x0001 = Power)
         zigbee.configureReporting(0x0001, 0x0020, 0x20, 600, 21600, 0x01) 	//Attribute ID 0x0020 = battery voltage, Data Type: U8BIT
@@ -381,14 +378,13 @@ def configure() {
 def refresh() {
 	def cmds =
         //Read the configured variables
-		zigbee.readAttribute(0x001, 0x0020) +	//Read BatteryVoltage
-		zigbee.readAttribute(0x201, 0x0000) +	//Read LocalTemperature
 		zigbee.readAttribute(0x201, 0x0008) +	//Read PIHeatingDemand
+		zigbee.readAttribute(0x201, 0x0000) +	//Read LocalTemperature
     	zigbee.readAttribute(0x201, 0x0012) +	//Read OccupiedHeatingSetpoint
         zigbee.readAttribute(0x201, 0x001C) +	//Read SystemMode
         zigbee.readAttribute(0x201, 0x001E) +	//Read ThermostatRunningMode
         zigbee.readAttribute(0x201, 0x0010) +	//Read LocalTemperatureCalibration
-        zigbee.readAttribute(0x201, 0x0080) +	//Read OpenWindowSensor
+		zigbee.readAttribute(0x001, 0x0020) +	//Read BatteryVoltage
         zigbee.readAttribute(0x000, 0x0003) +	//Read HW Version
         zigbee.readAttribute(0x000, 0x0001) +	//Read Application Version
     	zigbee.readAttribute(0x204, 0x0001)		//Read KeypadLockout
