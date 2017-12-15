@@ -12,7 +12,7 @@
  *
  *  eCozy ZigBee Thermostat
  *
- *  Version: 1.1
+ *  Version: 1.2
  *
  *  Author: ckpt-martin
  *
@@ -37,11 +37,11 @@ metadata {
         command "increaseHeatSetpoint"
         command "decreaseHeatSetpoint"
 
-		fingerprint profileId: "0104", endpointId: "03", inClusters: " 0000,0001,0003,000A,0020,0201,0204", outClusters: "0402", manufacturer: "eCozy", model: "Thermostat"
+	fingerprint profileId: "0104", endpointId: "03", inClusters: " 0000,0001,0003,000A,0020,0201,0204", outClusters: "0402", manufacturer: "eCozy", model: "Thermostat"
 	}
 
 preferences {
- 		input("unitformat", "enum", title: "What unit format do you want to display temperature in SmartThings? (NOTE: Thermostat displays Celsius regardless.)", options: ["Celsius", "Fahrenheit"], defaultValue: "Celsius", required: false, displayDuringSetup: false)
+ 	input("unitformat", "enum", title: "What unit format do you want to display temperature in SmartThings? (NOTE: Thermostat displays Celsius regardless.)", options: ["Celsius", "Fahrenheit"], defaultValue: "Celsius", required: false, displayDuringSetup: false)
         input("lock", "enum", title: "Display Lock?", options: ["No", "Temperature", "Touchscreen"], defaultValue: "No", required: false, displayDuringSetup: false)
         input("tempcal", "enum", title: "Temperature adjustment.", options: ["+2.5", "+2.0", "+1.5", "+1.0", "+0.5", "0", "-0.5", "-1.0", "-1.5", "-2.0", "-2.5"], defaultValue: "0", required: false, displayDuringSetup: false)
 }
@@ -54,13 +54,13 @@ preferences {
 			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
 				attributeState("temperature", backgroundColor:"#ffa81e", label:'${currentValue}°')
 			}
-            tileAttribute("device.heatingSetpoint", key: "VALUE_CONTROL", label:'${currentValue}°') {
+            		tileAttribute("device.heatingSetpoint", key: "VALUE_CONTROL", label:'${currentValue}°') {
 				attributeState("VALUE_UP", action:"increaseHeatSetpoint")
-                attributeState("VALUE_DOWN", action:"decreaseHeatSetpoint")
+                		attributeState("VALUE_DOWN", action:"decreaseHeatSetpoint")
 			}
 			tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
-                attributeState("default", label:'Battery ${currentValue}%', icon:"st.arlo.sensor_battery_4")
-                attributeState("battery_low", label:'BATTERY LOW!', icon:"st.arlo.sensor_battery_1")
+                		attributeState("default", label:'Battery ${currentValue}%', icon:"st.arlo.sensor_battery_4")
+               			attributeState("battery_low", label:'BATTERY LOW!', icon:"st.arlo.sensor_battery_1")
 			}
 			tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
 				attributeState("off", backgroundColor:"#1e9cbb", label:'Off')
@@ -69,29 +69,24 @@ preferences {
 			}
 		}
         standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "configure", label:"", action:"configuration.configure", icon:"st.secondary.configure"
-		}
+		state "configure", label:"", action:"configuration.configure", icon:"st.secondary.configure"
+	}
         standardTile("refresh", "device.refresh", decoration: "flat", width: 2, height: 2) {
-            state "default", action:"refresh", icon:"st.secondary.refresh"
+		state "default", action:"refresh", icon:"st.secondary.refresh"
         }
         valueTile("hwver", "device.hwver", decoration: "flat", width: 1, height: 1) {
-            state "default", label:'HW Version\n${currentValue}'
+		state "default", label:'HW Version\n${currentValue}'
         }
         valueTile("swver", "device.swver", decoration: "flat", width: 1, height: 1) {
-            state "default", label:'SW Version\n${currentValue}'
+		state "default", label:'SW Version\n${currentValue}'
         }
         valueTile("placeholder", "device.placeholder", decoration: "flat", width: 2, height: 1) {
-            state "default", label:""
-        }
-        valueTile("temp2", "device.temperature", decoration: "flat", width: 2, height: 2) {
-            state "cool", label:'${currentValue}°', backgroundColor:"#42bcf4"
-            state "dest_temp", label:'${currentValue}°', backgroundColor:"#44b621"
-            state "heat", label:'${currentValue}°', backgroundColor:"#ffa81e"
+		state "default", label:""
         }
         standardTile("setThermostatMode", "device.thermostatMode", decoration: "flat", width: 2, height: 2) {
-            state "auto", label:'${currentValue}°', action:"modeOff", icon:"st.thermostat.heat-auto", nextState: "off"
-            state "off", action:"modeHeat", icon:"st.thermostat.heating-cooling-off", nextState: "heat"
-            state "heat", action:"modeAuto", icon:"st.thermostat.heat", nextState: "auto"
+		state "auto", label:'${currentValue}°', action:"modeOff", icon:"st.thermostat.heat-auto", nextState: "off"
+		state "off", action:"modeHeat", icon:"st.thermostat.heating-cooling-off", nextState: "heat"
+		state "heat", action:"modeAuto", icon:"st.thermostat.heat", nextState: "auto"
         }
         main ("thermostatMulti")
         details(["thermostatMulti", "hwver", "swver", "configure", "refresh", "placeholder"])
@@ -114,7 +109,7 @@ def parse(String description) {
             {
             	map.value = "--"
             }
-		}
+	}
         else if (descMap.cluster == "0001" && descMap.attrId == "0020")
         {
 			log.debug "BATTERY VOLTAGE: $descMap.value"
@@ -128,44 +123,39 @@ def parse(String description) {
             else if (batteryVoltage == 25)
             {
                 map.value = "20"
-			}
+	    }
             else if (batteryVoltage == 26)
             {
                 map.value = "40"
-			}
+	    }
             else if (batteryVoltage == 27)
             {
                 map.value = "60"
-			}
+	    }
             else if (batteryVoltage == 28)
             {
                 map.value = "80"
-			}
-            else if (batteryVoltage == 29)
-            {
-                map.value = "90"
-			}
-            else if (batteryVoltage > 29)
-            {
+	    }
+            else if (batteryVoltage >= 29)
+	    {
                 map.value = "100"
-			}
-		}
+	    }
         else if (descMap.cluster == "0000" && descMap.attrId == "0001")
         {
 			log.debug "APPLICATION VERSION: $descMap.value"
 			map.name = "swver"
 			map.value = descMap.value
-		}
+	}
         else if (descMap.cluster == "0000" && descMap.attrId == "0003")
         {
 			log.debug "HW VERSION: $descMap.value"
 			map.name = "hwver"
 			map.value = descMap.value
-		}
+	}
         else if (descMap.cluster == "0201" && descMap.attrId == "0010")
         {
 			log.debug "TEMP CALIBRATION: $descMap.value"
-		}
+	}
         else if (descMap.cluster == "0201" && descMap.attrId == "0012")
         {
 			log.debug "HEATING SETPOINT: $descMap.value"
@@ -175,7 +165,7 @@ def parse(String description) {
             {
                 map.value = "--"
             }
-		}
+	}
         else if (descMap.cluster == "0201" && descMap.attrId == "0008")
         {
         	log.debug "THERMOSTAT STATE: $descMap.value"
@@ -230,10 +220,10 @@ def parse(String description) {
             {
 				map.value = "off"
             }
-		}
 	}
+}
 
-	def result = null
+def result = null
 	if (map) {
 		result = createEvent(map)
 	}
